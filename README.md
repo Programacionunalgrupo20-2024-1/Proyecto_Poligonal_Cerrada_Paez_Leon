@@ -1,4 +1,4 @@
-# Proyecto_final_Paez_Leon_Cartera_De_Campo_Radiación_Doble
+# Proyecto_final_Paez_Leon_Cartera_De_Campo_Poligonal_Cerrada
 
 Nuestro proyecto, está basado en una materia de nombre Geomática, la cual se ve en nuestra carrera que corresponde a Ingenieria Agrícola, en está materia lo que se hace
 es hacer levantamientos de edificios con el fin de saber distancias de un punto determinado, o angulos de los edificios, esquinas y todo lo que tenga que ver.
