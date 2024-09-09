@@ -1,10 +1,13 @@
 # calculations.py
 from math import atan, degrees, fabs
+from tkinter import messagebox
+import tkinter as tk
 
 
 
 class ConversionError(Exception):
     def __init__(self, gms_string, message="Formato de GMS no válido"):
+        messagebox.showinfo("Error", f"Formato de GMS no válido:")
         super().__init__(message)
         self.gms_string = gms_string
         self.message = message
@@ -66,4 +69,9 @@ def convertir_gms_a_decimal(gms_string):
         grados, minutos, segundos = map(float, gms_string.replace("°", "").replace("′", "").replace("″", "").split())
         return grados + (minutos / 60) + (segundos / 3600)
     except ValueError as e:
-        raise ValueError(f"Formato de GMS no válido: {gms_string}") from e
+        root = tk.Tk()
+        root.withdraw()
+        messagebox.showinfo("Error", f"Formato de GMS no válido: {gms_string}")
+        root.destroy()
+    
+           

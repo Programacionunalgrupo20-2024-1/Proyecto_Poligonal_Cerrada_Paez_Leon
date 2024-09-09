@@ -418,6 +418,7 @@ class App:
             # Recorrer y eliminar cada fila seleccionada
             for item in selected_items:
                 self.tree.delete(item)
-        else:
+        else: 
             messagebox.showwarning("Advertencia", "No se ha seleccionado ninguna fila para eliminar.")
+           
 
