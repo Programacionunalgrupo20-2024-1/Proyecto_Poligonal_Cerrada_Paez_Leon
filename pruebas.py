@@ -66,6 +66,8 @@ class App:
         self._create_right_frame()
         self.crear_top_frame()
 
+        self.configurar_teclado()
+
     def _create_superior_container(self):
 
         # Coordenadas guardadas
@@ -255,9 +257,25 @@ class App:
         if any(datos_fila_1[:3]):  # Verifica que al menos una de las primeras tres entradas tenga valor
             self.tree_tabla.insert("", "end", values=datos_fila_1, tags=("delta",))
 
-        # Agregar segunda fila de datos al Treeview
+
+        # Obtener datos de la segunda fila de entradas en el left_frame para el segundo treeview
+        datos_fila_2_reordenada = [""] * len(self.tree_tabla["columns"])  # Crear una lista con el número de columnas del Treeview segunda pestaña
+        datos_fila_2_reordenada[1] = self.left_entries[3].get()  # "Punto" de la fila 2
+
+        # Convertir el Ángulo OBS de la segunda fila
+        angulo_obs_2_tree = self.left_entries[4].get()
+        try:
+            datos_fila_2_reordenada[2] = convertir_a_gms(angulo_obs_2_tree) # Aplicar la conversión
+        except ConversionError as e:
+            messagebox.showerror("Error al convertir Ángulo OBS 2")
+
+        datos_fila_2_reordenada[6] = self.left_entries[5].get()  # "Distancia" de la fila 2
+        datos_fila_2_reordenada[15] = self.left_entries[6].get()  # "Observación" de la fila 2
+        
+
+        # Agregar segunda fila de datos al Treeview de segunda pestaña
         if any(datos_fila_2[1:]):  # Verifica que al menos uno de los campos relevantes tenga valor
-            id_fila_2 = self.tree_tabla.insert("", "end", values=datos_fila_2, tags=("delta",))
+            id_fila_2 = self.tree_tabla.insert("", "end", values=datos_fila_2_reordenada, tags=("delta",))
 
         # Agregar segunda fila de datos al Treeview
         if any(datos_fila_2[1:]):  # Verifica que al menos uno de los campos relevantes tenga valor
@@ -291,6 +309,26 @@ class App:
         # Agregar segunda fila de datos al Treeview
         if any(datos_fila_2[1:]):  # Verifica que al menos uno de los campos relevantes tenga valor
             self.tree.insert("", "end", values=datos_fila_2, tags=("detalle",))
+
+        # Obtener datos de la segunda fila de entradas en el left_frame para el segundo treeview
+        datos_fila_2_reordenada = [""] * len(self.tree_tabla["columns"])  # Crear una lista con el número de columnas del Treeview segunda pestaña
+        datos_fila_2_reordenada[1] = self.left_entries[3].get()  # "Punto" de la fila 2
+
+        # Convertir el Ángulo OBS de la segunda fila
+        angulo_obs_2_tree = self.left_entries[4].get()
+        try:
+            datos_fila_2_reordenada[2] = convertir_a_gms(angulo_obs_2_tree) # Aplicar la conversión
+        except ConversionError as e:
+            messagebox.showerror("Error al convertir Ángulo OBS 2")
+
+        datos_fila_2_reordenada[6] = self.left_entries[5].get()  # "Distancia" de la fila 2
+        datos_fila_2_reordenada[15] = self.left_entries[6].get()  # "Observación" de la fila 2
+        
+
+        # Agregar segunda fila de datos al Treeview de segunda pestaña
+        if any(datos_fila_2[1:]):  # Verifica que al menos uno de los campos relevantes tenga valor
+            id_fila_2 = self.tree_tabla.insert("", "end", values=datos_fila_2_reordenada, tags=("detalle",))
+        
 
         # Limpiar las entradas después de agregar la fila
         for entry in self.left_entries:
@@ -329,6 +367,14 @@ class App:
         style.map('Treeview.Heading', background=[('selected', 'lightblue')])
         style.configure('Treeview', font=('Arial',7))
 
+        # Configuración de estilo para colores de filas
+        self.style = ttk.Style()
+        self.style.configure("delta.Treeview", background="lightgreen")
+        self.style.configure("detalle.Treeview", background="lightcoral")
+        
+        self.tree_tabla.tag_configure("delta", background="lightgreen")
+        self.tree_tabla.tag_configure("detalle", background="lightcoral")
+
         for label in column_widths_2:
             self.tree_tabla.heading(label, text=label, anchor='center')
             # Asigna el ancho específico para cada columna
@@ -337,6 +383,7 @@ class App:
         # Configurar las filas y columnas del right_frame para que el Treeview y el nuevo frame se ajusten
         self.tree_tabla.grid_columnconfigure(0, weight=1)
         self.tree_tabla.grid_rowconfigure(0, weight=1)
+
 
 
 
@@ -467,8 +514,13 @@ class App:
         
         except ValueError:
             messagebox.showerror("Formato invalido")  
+    
+    def configurar_teclado(self):
+        
+        # Bindear la tecla "Supr" para eliminar filas
+        self.root.bind('<Delete>', self.eliminar_fila)
 
-    def eliminar_fila(self):
+    def eliminar_fila(self, event=None):
         # Obtener todas las filas seleccionadas
         selected_items = self.tree.selection()
         
@@ -478,4 +530,13 @@ class App:
                 self.tree.delete(item)
         else:
             messagebox.showwarning("Advertencia", "No se ha seleccionado ninguna fila para eliminar.")
+
+        if selected_items:
+            # Recorrer y eliminar cada fila seleccionada
+            for item in selected_items:
+                self.tree_tabla.delete(item)
+        else:
+            messagebox.showwarning("Advertencia", "No se ha seleccionado ninguna fila para eliminar.")
+
+        
 
