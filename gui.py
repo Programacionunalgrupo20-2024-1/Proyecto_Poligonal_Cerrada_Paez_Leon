@@ -1,10 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
-from math import fabs, atan, degrees, sqrt
-from calculos import decimal_a_dms, determinar_cuadrante, calcular_azimut, convertir_gms_a_decimal, convertir_a_gms
-
-
-
+from math import fabs, atan, degrees, sqrt, cos, radians
+from calculos import decimal_a_dms, determinar_cuadrante, calcular_azimut, convertir_gms_a_decimal, convertir_a_gms, ConversionError
 
 
 class PlaceholderEntry(tk.Entry):
@@ -26,8 +23,6 @@ class PlaceholderEntry(tk.Entry):
             self.insert(0, self.placeholder)
             self.config(fg='grey')  # Cambia el color del texto a gris cuando no se enfoca
 
-
-
 class App:
 
     def __init__(self, root):
@@ -35,10 +30,19 @@ class App:
         self.root.title("Interfaz con Frame a la Izquierda")
         self.root.state('zoomed')
 
-        self.main_frame = tk.Frame(self.root)
-        self.main_frame.grid(row=0, column=0, sticky='nsew')
-        
+        # Creación del Notebook
+        self.notebook = ttk.Notebook(self.root)
+        self.notebook.grid(row=0, column=0, sticky='nsew')
 
+        # Frames alojados en Notebook
+        self.main_frame = ttk.Frame(self.notebook)
+        self.poligonal_frame = ttk.Frame(self.notebook)
+        
+        # Se añaden frames como pestañas al notebook
+        self.notebook.add(self.main_frame, text='Calculos')
+        self.notebook.add(self.poligonal_frame, text='Tabla de cáculos')
+
+        # Contenido del Main Frame
         self.contenedor_superior = tk.Frame(self.main_frame, bg="lightgrey", bd=2, relief="solid")
         self.contenedor_superior.grid(row=0, column=0, sticky='ew', padx=5, pady=(5, 0))  # Ajuste de padding
 
@@ -47,6 +51,8 @@ class App:
 
         self.valores_col3 = []
         self.valores_col3_decimales = []
+        self.ajuste = []
+        self.azimut_general= []
 
         self.left_frame = tk.Frame(self.main_frame, bg="lightgrey", bd=2, relief="solid")
         self.left_frame.grid(row=1, column=0, sticky='nsew', padx=5, pady=(0, 5))  # Ajuste de padding
@@ -54,9 +60,15 @@ class App:
         self.right_frame = tk.Frame(self.main_frame, bg="white", bd=2, relief="solid")
         self.right_frame.grid(row=2, column=0, sticky='nsew', padx=5, pady=(0, 5))  # Ajuste de padding
 
+        # Contenido de Poligonal Frame
+        self.top_frame = tk.Frame(self.poligonal_frame, bg="lightgrey", bd=2, relief="solid")
+        self.top_frame.grid(row=0, column=0, sticky='nsew', padx=0, pady=0)
+
         self._create_left_frame()
         self._create_right_frame()
-    
+        self.crear_top_frame()
+
+        self.configurar_teclado()
 
     def _create_superior_container(self):
 
@@ -87,18 +99,18 @@ class App:
             label_widget.grid(row=1, column=idx, padx=1, pady=1, sticky='ew')
 
         # Entrada de puntos texto
-        entrada_1 = tk.Entry(self.contenedor_superior, font=("Arial", 8), width= 10)
+        entrada_1 = tk.Entry(self.contenedor_superior, font=("Arial", 8), width= 8)
         entrada_1.grid(row=2, column=0, padx=1, pady=1, sticky='ew')
 
-        entrada_2 = tk.Entry(self.contenedor_superior, font=("Arial", 8), width= 10)
+        entrada_2 = tk.Entry(self.contenedor_superior, font=("Arial", 8), width= 8)
         entrada_2.grid(row=3, column=0, padx=1, pady=1, sticky='ew')
 
         # Entrada de coordenadas norte
-        norte_1 = tk.Entry(self.contenedor_superior, font=("Arial", 8), width= 10)
+        norte_1 = tk.Entry(self.contenedor_superior, font=("Arial", 8), width= 8)
         norte_1.grid(row=2, column=1, padx=1, pady=1, sticky='ew')
         self.norte_uno.append(norte_1)
 
-        norte_2 = tk.Entry(self.contenedor_superior, font=("Arial", 8), width= 10)
+        norte_2 = tk.Entry(self.contenedor_superior, font=("Arial", 8), width= 8)
         norte_2.grid(row=3, column=1, padx=1, pady=1, sticky='ew')
         self.norte_dos.append(norte_2)
 
@@ -113,28 +125,28 @@ class App:
 
 
         # Etiquetas de diferencias con fuente más grande
-        self.diferencia_label = tk.Label(self.contenedor_superior, text="DIFERENCIA", bg="lightgrey", font=("Arial", 10, "bold"))
+        self.diferencia_label = tk.Label(self.contenedor_superior, text="DIFERENCIA", bg="lightgrey", font=("Arial", 8, "bold"))
         self.diferencia_label.grid(row=5,  column=0, padx=1, pady=1, sticky='w')
 
-        self.diferencia_norte_label = tk.Label(self.contenedor_superior, text="Norte", bg="lightgrey", font=("Arial", 8))
+        self.diferencia_norte_label = tk.Label(self.contenedor_superior, text="Norte", bg="lightgrey", font=("Arial", 7))
         self.diferencia_norte_label.grid(row=4, column=1, padx=1, pady=1, sticky='ew')
 
-        self.diferencia_este_label = tk.Label(self.contenedor_superior, text="Este", bg="lightgrey", font=("Arial", 8))
+        self.diferencia_este_label = tk.Label(self.contenedor_superior, text="Este", bg="lightgrey", font=("Arial", 7))
         self.diferencia_este_label.grid(row=4, column=2, padx=1, pady=1, sticky='ew')
 
-        self.diferencia_norte_value_label = tk.Label(self.contenedor_superior, text="", bg="lightgrey", font=("Arial", 8))
+        self.diferencia_norte_value_label = tk.Label(self.contenedor_superior, text="", bg="lightgrey", font=("Arial", 7))
         self.diferencia_norte_value_label.grid(row=5, column=1, padx=1, pady=1, sticky='ew')
 
-        self.diferencia_este_value_label = tk.Label(self.contenedor_superior, text="", bg="lightgrey", font=("Arial", 8))
+        self.diferencia_este_value_label = tk.Label(self.contenedor_superior, text="", bg="lightgrey", font=("Arial", 7))
         self.diferencia_este_value_label.grid(row=5, column=2, padx=1, pady=1, sticky='ew')
 
-        self.angulo_value_label = tk.Label(self.contenedor_superior, text="", bg="lightgrey", font=("Arial", 8))
+        self.angulo_value_label = tk.Label(self.contenedor_superior, text="", bg="lightgrey", font=("Arial", 7))
         self.angulo_value_label.grid(row=2, column=3, padx=1, pady=1, sticky='ew')
 
-        self.cuadrante_label = tk.Label(self.contenedor_superior, text="", bg="lightgrey", font=("Arial", 8))
+        self.cuadrante_label = tk.Label(self.contenedor_superior, text="", bg="lightgrey", font=("Arial", 7))
         self.cuadrante_label.grid(row=2, column=4, padx=1, pady=1, sticky='ew')
 
-        self.azimut_label = tk.Label(self.contenedor_superior, text="", bg="lightgrey", font=("Arial", 8))
+        self.azimut_label = tk.Label(self.contenedor_superior, text="", bg="lightgrey", font=("Arial", 7))
         self.azimut_label.grid(row=2, column=5, padx=1, pady=1, sticky="ew")
 
         # Botón con fuente más grande
@@ -142,7 +154,7 @@ class App:
         calcular_button.grid(row=7, column=0, columnspan=len(self.column_labels), pady=1, sticky='ew')
         
     def calcular_diferencias(self):
-            
+            filas = self.tree_tabla.get_children()
             norte_1 = float(self.norte_uno[0].get())
             norte_2 = float(self.norte_dos[0].get())
             este_1 = float(self.este_uno[0].get())
@@ -160,18 +172,18 @@ class App:
 
             calculo = atan(fabs(diferencia_este)/fabs(diferencia_norte))
             angulo = degrees(calculo)
-            angulo_convertido = decimal_a_dms(angulo)
-            self.angulo_value_label.config(text=f"{angulo_convertido}")
+            self.angulo_convertido = decimal_a_dms(angulo)
+            self.angulo_value_label.config(text=f"{self.angulo_convertido}")
 
-            calculo_azimut = calcular_azimut(cuadrante,angulo)
-            azimut_convertido = decimal_a_dms(calculo_azimut)
+            self.calculo_azimut = calcular_azimut(cuadrante,angulo)
+            azimut_convertido = decimal_a_dms(self.calculo_azimut)
             self.azimut_label.config(text=f"{azimut_convertido}")
-
+            self.azimut_general.append(azimut_convertido)
 
     def _create_left_frame(self):
         tk.Label(self.left_frame, text="Cartera de campo", bg="lightgrey", font=("Arial", 10, "bold")).grid(row=0, column=0, columnspan=6, pady=(2, 5), sticky='ew')
 
-        self.left_frame.grid_columnconfigure(0, weight=0)
+        self.left_frame.grid_columnconfigure(5, weight=0)
         for col in range(1, 6):
             self.left_frame.grid_columnconfigure(col, weight=0)
 
@@ -199,27 +211,32 @@ class App:
         button_frame.grid(row=4, column=0, columnspan=len(labels), pady=5, sticky='ew')
         button_frame.grid_columnconfigure(0, weight=1)
 
-        add_button = tk.Button(button_frame, text="Agregar Delta", command=self.agregar_fila, font=("Arial", 8))
-        add_button.pack(side="left", padx=3, pady=3, expand=True)
+        self.add_button = tk.Button(button_frame, text="Agregar Delta", command=self.agregar_fila, font=("Arial", 8))
+        self.add_button.pack(side="left", padx=3, pady=3, expand=True)
 
-        add_second_row_button = tk.Button(button_frame, text="Agregar Detalle", command=self.agregar_solo_segunda_fila, font=("Arial", 8))
-        add_second_row_button.pack(side="left", padx=3, pady=3, expand=True)
+        self.add_second_row_button = tk.Button(button_frame, text="Agregar Detalle", command=self.agregar_solo_segunda_fila, font=("Arial", 8))
+        self.add_second_row_button.pack(side="left", padx=3, pady=3, expand=True)
 
         remove_button = tk.Button(button_frame, text="Eliminar Fila", command=self.eliminar_fila, font=("Arial", 8))
         remove_button.pack(side="left", padx=3, pady=3, expand=True)
 
     def agregar_fila(self):
+        
         # Obtener datos de la primera fila de entradas en el left_frame
         datos_fila_1 = [entry.get() for entry in self.left_entries[:3]]  # Ajusta el rango para tomar solo las primeras tres columnas
         
+
         # Convertir el Ángulo OBS de la primera fila
         angulo_obs_1 = self.left_entries[2].get()  # Índice correcto para el Ángulo OBS
-        print(f"Ángulo OBS 1 (antes de conversión): {angulo_obs_1}")  # Mensaje de depuración
-        datos_fila_1[2] = convertir_a_gms(angulo_obs_1) # Aplicar la conversión
-        print(f"Ángulo OBS 1 (después de conversión): {datos_fila_1[2]}")  # Mensaje de depuración
+        
+        try:
+            datos_fila_1[2] = convertir_a_gms(angulo_obs_1) # Aplicar la conversión
+        except ConversionError as e:
+            messagebox.showerror("Error al convertir Ángulo OBS 1")
+            return
 
         # Completa con columnas vacías para las últimas dos columnas (Distancia y Observación)
-        datos_fila_1.extend(["", ""])
+        datos_fila_1.extend(["", "", "", "", "", "", "", "", "", ""])
         
         # Obtener datos de la segunda fila de entradas en el left_frame
         datos_fila_2 = [""] * len(self.tree["columns"])  # Crear una lista con el número de columnas del Treeview
@@ -227,17 +244,41 @@ class App:
 
         # Convertir el Ángulo OBS de la segunda fila
         angulo_obs_2 = self.left_entries[4].get()
-        print(f"Ángulo OBS 2 (antes de conversión): {angulo_obs_2}")  # Mensaje de depuración
-        datos_fila_2[2] = convertir_a_gms(angulo_obs_2) # Aplicar la conversión
-        print(f"Ángulo OBS 2 (después de conversión): {datos_fila_2[2]}")  # Mensaje de depuración
+        try:
+            datos_fila_2[2] = convertir_a_gms(angulo_obs_2) # Aplicar la conversión
+        except ConversionError as e:
+            messagebox.showerror("Error al convertir Ángulo OBS 2")
+            
 
         datos_fila_2[3] = self.left_entries[5].get()  # "Distancia" de la fila 2
         datos_fila_2[4] = self.left_entries[6].get()  # "Observación" de la fila 2
-
-
+        
         # Agregar primera fila de datos al Treeview
         if any(datos_fila_1[:3]):  # Verifica que al menos una de las primeras tres entradas tenga valor
             self.tree.insert("", "end", values=datos_fila_1, tags=("delta",))
+
+        # Agregar primera fila de datos al Treeview de segunda pestaña
+        if any(datos_fila_1[:3]):  # Verifica que al menos una de las primeras tres entradas tenga valor
+            self.tree_tabla.insert("", "end", values=datos_fila_1, tags=("delta",))
+
+
+        # Obtener datos de la segunda fila de entradas en el left_frame para el segundo treeview
+        self.datos_fila_2_reordenada = [""] * len(self.tree_tabla["columns"])  # Crear una lista con el número de columnas del Treeview segunda pestaña
+        self.datos_fila_2_reordenada[1] = self.left_entries[3].get()  # "Punto" de la fila 2
+
+        # Convertir el Ángulo OBS de la segunda fila
+        angulo_obs_2_tree = self.left_entries[4].get()
+        try:
+            self.datos_fila_2_reordenada[2] = convertir_a_gms(angulo_obs_2_tree) # Aplicar la conversión
+        except ConversionError as e:
+            messagebox.showerror("Error al convertir Ángulo OBS 2")
+        self.datos_fila_2_reordenada[6] = self.left_entries[5].get()  # "Distancia" de la fila 2
+        self. datos_fila_2_reordenada[15] = self.left_entries[6].get()  # "Observación" de la fila 2
+        
+
+        # Agregar segunda fila de datos al Treeview de segunda pestaña
+        if any(datos_fila_2[1:]):  # Verifica que al menos uno de los campos relevantes tenga valor
+            id_fila_2 = self.tree_tabla.insert("", "end", values=self.datos_fila_2_reordenada, tags=("delta",))
 
         # Agregar segunda fila de datos al Treeview
         if any(datos_fila_2[1:]):  # Verifica que al menos uno de los campos relevantes tenga valor
@@ -249,9 +290,10 @@ class App:
             decimales = convertir_gms_a_decimal(valor_col3)
             self.valores_col3_decimales.append(decimales)  # Guardar en la lista
 
-        # Limpiar las entradas después de agregar las filas
-        for entry in self.left_entries:
-            entry.delete(0, tk.END)
+
+        # Limpiar las entradas después de agregar las filas 
+        for entrada in self.left_entries:
+            entrada.delete(0, tk.END)
 
 
     def agregar_solo_segunda_fila(self):
@@ -272,9 +314,261 @@ class App:
         if any(datos_fila_2[1:]):  # Verifica que al menos uno de los campos relevantes tenga valor
             self.tree.insert("", "end", values=datos_fila_2, tags=("detalle",))
 
+        # Obtener datos de la segunda fila de entradas en el left_frame para el segundo treeview
+        datos_fila_2_reordenada = [""] * len(self.tree_tabla["columns"])  # Crear una lista con el número de columnas del Treeview segunda pestaña
+        datos_fila_2_reordenada[1] = self.left_entries[3].get()  # "Punto" de la fila 2
+
+        # Convertir el Ángulo OBS de la segunda fila
+        angulo_obs_2_tree = self.left_entries[4].get()
+        try:
+            datos_fila_2_reordenada[2] = convertir_a_gms(angulo_obs_2_tree) # Aplicar la conversión
+        except ConversionError as e:
+            messagebox.showerror("Error al convertir Ángulo OBS 2")
+
+        datos_fila_2_reordenada[6] = self.left_entries[5].get()  # "Distancia" de la fila 2
+        datos_fila_2_reordenada[15] = self.left_entries[6].get()  # "Observación" de la fila 2
+        
+
+        # Agregar segunda fila de datos al Treeview de segunda pestaña
+        if any(datos_fila_2[1:]):  # Verifica que al menos uno de los campos relevantes tenga valor
+            id_fila_2 = self.tree_tabla.insert("", "end", values=datos_fila_2_reordenada, tags=("detalle",))
+        
+
         # Limpiar las entradas después de agregar la fila
         for entry in self.left_entries:
             entry.delete(0, tk.END)
+
+    def crear_top_frame(self):
+
+        Tabla_labels_2 = ["Delta", "Punto", "Angulo\nOBS", "Ajuste\nAngular", "Angulo\nCorregido", "Azimut", "Distancia", "N-S", "E-W", "Ajuste\nN-S", "Ajuste\nE-W ", "N-S\nCorregido", "E-W\nCorregido", "Coordenadas\nN-S", "Coordenadas\nE-W", "Observaciones"]
+        
+        column_widths_2 = {
+            "Delta" : 60,
+            "Punto" : 60,
+            "Angulo\nOBS" : 70,
+            "Ajuste\nAngular": 70,
+            "Angulo\nCorregido": 70,
+            "Azimut" : 70,
+            "Distancia" : 50,
+            "N-S" : 60,
+            "E-W" : 60,
+            "Ajuste\nN-S" : 60,
+            "Ajuste\nE-W " : 60,
+            "N-S\nCorregido" : 60,
+            "E-W\nCorregido" : 60,
+            "Coordenadas\nN-S" : 60,
+            "Coordenadas\nE-W" : 60,
+            "Observaciones" : 80
+        }
+
+        self.tree_tabla = ttk.Treeview(self.top_frame, columns=Tabla_labels_2, show='headings', height=10)
+        self.tree_tabla.grid(row=0, column=1, padx=0, pady=0, sticky='nsew')
+        self.top_frame.config(width=500, height=100)
+
+        # Crear un estilo y configurar la fuente
+        style = ttk.Style()
+        style.configure('Treeview.Heading', font=('Arial', 7, 'bold'))
+        style.map('Treeview.Heading', background=[('selected', 'lightblue')])
+        style.configure('Treeview', font=('Arial',7))
+
+        # Configuración de estilo para colores de filas
+        self.style = ttk.Style()
+        self.style.configure("delta.Treeview", background="lightgreen")
+        self.style.configure("detalle.Treeview", background="lightcoral")
+        
+        self.tree_tabla.tag_configure("delta", background="lightgreen")
+        self.tree_tabla.tag_configure("detalle", background="lightcoral")
+
+        for label in column_widths_2:
+            self.tree_tabla.heading(label, text=label, anchor='center')
+            # Asigna el ancho específico para cada columna
+            self.tree_tabla.column(label, width=column_widths_2.get(label, 70), anchor=tk.CENTER)
+
+        # Configurar las filas y columnas del right_frame para que el Treeview y el nuevo frame se ajusten
+        self.tree_tabla.grid_columnconfigure(0, weight=1)
+        self.tree_tabla.grid_rowconfigure(0, weight=1)
+
+        self.boton_ajuste_angular = tk.Button(self.top_frame, text="Ajuste", command=self.ubicar_ajuste_angular)
+        self.boton_ajuste_angular.grid(row=1, column=1, padx=1, pady=1, sticky='ew')
+
+        self.boton_angulo_ajustado = tk.Button(self.top_frame, text="Ajustado", command=self.angulo_ajustado)
+        self.boton_angulo_ajustado.grid(row=2, column=1, padx=1, pady=1, sticky='ew')
+
+        self.boton_azimut = tk.Button(self.top_frame, text="Azimut", command=self.primer_azimut)
+        self.boton_azimut.grid(row=3, column=3, padx=1, pady=1, sticky='ew')
+
+        self.boton_azimut = tk.Button(self.top_frame, text="contraAzimut", command=self.coontra_azimut)
+        self.boton_azimut.grid(row=4, column=4, padx=1, pady=1, sticky='ew')
+
+        self.boton_azimut = tk.Button(self.top_frame, text="siguientes", command=self.calcular_siguientes_azimuts)
+        self.boton_azimut.grid(row=5, column=4, padx=1, pady=1, sticky='ew')
+
+        self.boton_azimut = tk.Button(self.top_frame, text="proyecciones", command=self.proyeccion_n_s)
+        self.boton_azimut.grid(row=6, column=4, padx=1, pady=1, sticky='ew')
+
+
+
+    def ubicar_ajuste_angular(self):
+        ajuste = self.ajuste
+        filas = self.tree_tabla.get_children()
+        for i, fila_id in enumerate(filas):
+            if i % 2 != 0:
+                # Obtén los valores de la fila actual
+                valores_fila = self.tree_tabla.item(fila_id, 'values')
+
+                # Asigna el ajuste a la columna deseada (ejemplo columna 3, índice 2)
+                # Supongo que `self.ajuste` es el valor que quieres ubicar en la columna 3
+                valores_fila = list(valores_fila)  # Convierte la tupla a lista para modificar
+                valores_fila[3] = ajuste[0]  # Actualiza el valor en la columna 3
+
+                # Modifica la fila con los nuevos valores
+                self.tree_tabla.item(fila_id, values=valores_fila)
+
+    def angulo_ajustado(self):
+        filas = self.tree_tabla.get_children()
+        for i, fila_id in enumerate(filas):
+            if i % 2 != 0:
+                # Obtén los valores de la fila actual
+                valores_fila = self.tree_tabla.item(fila_id, 'values')
+
+                # Asigna el ajuste a la columna deseada (ejemplo columna 3, índice 2)
+                # Supongo que `self.ajuste` es el valor que quieres ubicar en la columna 3
+                valores_fila = list(valores_fila)  # Convierte la tupla a lista para modificar
+                angulo_obs = convertir_gms_a_decimal(valores_fila[2])
+                ajuste_convertido = convertir_gms_a_decimal(valores_fila[3])
+                suma = angulo_obs+ajuste_convertido
+                suma_convertida = decimal_a_dms(suma)
+                valores_fila[4] = suma_convertida # Actualiza el valor en la columna 3
+
+                # Modifica la fila con los nuevos valores
+                self.tree_tabla.item(fila_id, values=valores_fila)
+
+    def primer_azimut(self):
+        self.az = []  # Reiniciar la lista de azimuts
+        az_general = self.azimut_general  # Asegúrate de que az_general es una cadena de texto
+        if isinstance(az_general, list):  # Si es una lista, tomar el primer elemento
+            az_general = az_general[0]
+
+        filas = self.tree_tabla.get_children()
+        
+        if len(filas) > 1:
+            fila_id = filas[1]  # La fila 1
+            valores_fila = self.tree_tabla.item(fila_id, 'values')
+            valores_fila = list(valores_fila)  # Convierte la tupla a lista para modificar
+
+            try:
+                az_general_convertido = convertir_gms_a_decimal(az_general)
+                angulo_ajustado_convertido = convertir_gms_a_decimal(valores_fila[4])
+
+                suma = az_general_convertido + angulo_ajustado_convertido
+
+                if suma > 360:
+                    suma -= 360
+
+                valores_fila[5] = decimal_a_dms(suma)
+                self.az.append(valores_fila[5])
+                self.tree_tabla.item(fila_id, values=valores_fila)
+
+            except Exception as e:
+                print(f"Error en primer_azimut: {e}")
+                print(f"az_general: {az_general}, angulo_ajustado: {valores_fila[4]}")
+        else:
+            print("No hay suficientes filas para calcular el primer azimut.")
+
+    def coontra_azimut(self):
+        filas = self.tree_tabla.get_children()
+        
+        if len(filas) > 2:
+            for i in range(2, len(filas), 2):  # Procesar solo filas impares
+                fila_id = filas[i]
+                valores_fila = self.tree_tabla.item(fila_id, 'values')
+                valores_fila = list(valores_fila)  # Convierte la tupla a lista para modificar
+
+                try:
+                    if len(self.az) > 0:  # Asegúrate de que hay valores en self.az
+                        ultimo_azimut = convertir_gms_a_decimal(self.az[0])  # Último azimut calculado en la fila 1
+                        if ultimo_azimut <= 180:
+                            contraazimut = ultimo_azimut + 180
+                        else:
+                            contraazimut = ultimo_azimut - 180
+
+                        valores_fila[5] = decimal_a_dms(contraazimut)
+                        self.az.append(valores_fila[5])
+                        self.tree_tabla.item(fila_id, values=valores_fila)
+                    else:
+                        raise ValueError("No hay azimuts disponibles para calcular el contraazimut.")
+
+                except Exception as e:
+                    print(f"Error al calcular el contraazimut en la fila {i}: {e}")
+                    print(f"ultimo_azimut: {self.az[0]}")
+        else:
+            print("No hay suficientes filas para calcular el contraazimut.")
+
+
+    def calcular_siguientes_azimuts(self):
+        filas = self.tree_tabla.get_children()
+        
+        if len(filas) > 2:
+            # Comenzar desde la fila 3
+            for i in range(3, len(filas), 2):  # Solo procesar filas impares
+                fila_id = filas[i]
+                valores_fila = self.tree_tabla.item(fila_id, 'values')
+                valores_fila = list(valores_fila)  # Convierte la tupla a lista para modificar
+
+                try:
+                    ultimo_contraazimut = convertir_gms_a_decimal(self.az[-1])  # Último contraazimut calculado
+                    angulo_ajustado = valores_fila[4]  # Asegúrate de que el ángulo ajustado esté en la columna 4
+
+                    if angulo_ajustado:
+                        angulo_ajustado_convertido = convertir_gms_a_decimal(angulo_ajustado)
+                        if angulo_ajustado_convertido is None:
+                            raise ValueError(f"Error al convertir el ángulo ajustado: {angulo_ajustado}")
+
+                        suma = ultimo_contraazimut + angulo_ajustado_convertido
+
+                        if suma > 360:
+                            suma -= 360
+
+                        valores_fila[5] = decimal_a_dms(suma)
+                        self.az.append(valores_fila[5])
+                        self.tree_tabla.item(fila_id, values=valores_fila)
+                    else:
+                        raise ValueError(f"El ángulo ajustado en la fila {i} es inválido o está vacío.")
+
+                except Exception as e:
+                    print(f"Error al calcular los siguientes azimuts en la fila {i}: {e}")
+                    print(f"angulo_ajustado: {angulo_ajustado}, ultimo_contraazimut: {self.az[-1]}")
+        else:
+            print("No hay suficientes filas para calcular los siguientes azimuts.")
+
+    def proyeccion_n_s(self):
+        filas = self.tree_tabla.get_children()
+
+        for i, fila_id in enumerate(filas):
+            if i % 2 != 0:  # Solo procesar filas impares
+                # Obtén los valores de la fila actual
+                valores_fila = self.tree_tabla.item(fila_id, 'values')
+                
+                # Convierte la tupla a lista para modificar
+                valores_fila = list(valores_fila)
+
+                try:
+                    # Obtener los valores de las columnas 5 y 6 (índices 4 y 5)
+                    valor_columna_5 = convertir_gms_a_decimal(valores_fila[5])  # Índice 4 es columna 5
+                    valor_columna_6 = float(valores_fila[6])  # Índice 5 es columna 6
+                    
+                    # Calcular el coseno de la columna 5 por la columna 6
+                    proyeccion = cos(radians(valor_columna_5)) * valor_columna_6
+            
+                    # Asignar el resultado en alguna columna (por ejemplo, en la columna 7, índice 6)
+                    valores_fila[7] = f"{proyeccion:.4f}"
+
+                    # Modifica la fila con los nuevos valores
+                    self.tree_tabla.item(fila_id, values=valores_fila)
+
+                except Exception as e:
+                    print(f"Error al calcular la proyección N-S en la fila {i}: {e}")
+
 
 
     def _create_right_frame(self):
@@ -289,9 +583,9 @@ class App:
             "Observación": 75
         }
         
-        self.tree = ttk.Treeview(self.right_frame, columns=labels, show='headings')
-        self.tree.grid(row=0, column=0, padx=2, pady=2, sticky='nsew')
-        self.right_frame.config(width=300, height=150)
+        self.tree = ttk.Treeview(self.right_frame, columns=labels, show='headings', height=5)
+        self.tree.grid(row=0, column=0, padx=1, pady=1, sticky='nsew')
+        self.right_frame.config(width=300, height=100)
 
         # Configuración de estilo para colores de filas
         self.style = ttk.Style()
@@ -318,12 +612,9 @@ class App:
         self.rectangular_frame.config(width=200, height=150) 
 
         # Configurar las columnas y filas del nuevo frame rectangular
-        self.rectangular_frame.grid_columnconfigure(0, weight=1)
-        self.rectangular_frame.grid_rowconfigure(0, weight=1)
+        self.rectangular_frame.grid_columnconfigure(0, weight=0)
+        self.rectangular_frame.grid_rowconfigure(0, weight=0)
 
-        # Titulo del frame
-        #titulo_juste_angular_label = tk.Label(self.rectangular_frame, text="Ajuste angular", bg="lightgrey", font=("Arial", 8, "bold"))
-        #titulo_juste_angular_label.grid(row=0, column=0, padx=1, pady=1, sticky='w')
 
         # Etiquetas una debajo de otra
         sumataria_observada_label = tk.Label(self.rectangular_frame, text="Sumatoria Obs", bg="lightgrey", font=("Arial", 7))
@@ -369,7 +660,6 @@ class App:
         self.calculo_ajuste_angular_label = tk.Label(self.rectangular_frame,  text="", bg="lightgrey", font=("Arial", 7))
         self.calculo_ajuste_angular_label.grid(row=5, column=1, padx=1, pady=1, sticky='w')
 
-
     def calcular_ajuste_angular(self):
         try:
             # Obtener valor de a
@@ -401,16 +691,21 @@ class App:
             self.calculo_error_angular_label.config(text=f"{error_angular_convertido}")
 
             # Ajuste Angular
-            ajuste_angular = error_angular/(lados+1)*1
-            ajuste_angular_convertido = decimal_a_dms(ajuste_angular)
+            self.ajuste_angular = error_angular/(lados+1)*1
+            ajuste_angular_convertido = decimal_a_dms(self.ajuste_angular)
             self.calculo_ajuste_angular_label.config(text=f"{ajuste_angular_convertido}")
+            self.ajuste.append(ajuste_angular_convertido)
 
         
         except ValueError:
             messagebox.showerror("Formato invalido")  
+    
+    def configurar_teclado(self):
+        
+        # Bindear la tecla "Supr" para eliminar filas
+        self.root.bind('<Delete>', self.eliminar_fila)
 
-
-    def eliminar_fila(self):
+    def eliminar_fila(self, event=None):
         # Obtener todas las filas seleccionadas
         selected_items = self.tree.selection()
         
@@ -418,7 +713,15 @@ class App:
             # Recorrer y eliminar cada fila seleccionada
             for item in selected_items:
                 self.tree.delete(item)
-        else: 
+        else:
             messagebox.showwarning("Advertencia", "No se ha seleccionado ninguna fila para eliminar.")
-           
+
+        if selected_items:
+            # Recorrer y eliminar cada fila seleccionada
+            for item in selected_items:
+                self.tree_tabla.delete(item)
+        else:
+            messagebox.showwarning("Advertencia", "No se ha seleccionado ninguna fila para eliminar.")
+
+        
 
